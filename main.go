@@ -1,8 +1,17 @@
 package main
 
-import "github.com/hewo233/hdu-cxsj1/db"
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/hewo233/hdu-cxsj1/Init"
+	"github.com/hewo233/hdu-cxsj1/route"
+)
 
 func main() {
-	db.ConnectDB()
-	//db.InitDB()
+	Init.Init()
+
+	r := gin.Default()
+
+	route.InitRoute(r)
+
+	r.Run(":8080")
 }

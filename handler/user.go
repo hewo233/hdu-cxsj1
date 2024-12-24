@@ -20,6 +20,29 @@ func Register(c *gin.Context) {
 			"errno": 40000,
 			"msg":   "Bad Request",
 		})
+		c.Abort()
+		return
+	}
+
+	tryUser := db.DB.Table("users").Where("email = ?", newUser.Email).First(&module.User{})
+	if tryUser.RowsAffected > 0 {
+		log.Println("email exists")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"errno": 40000,
+			"msg":   "Bad Request, email exists",
+		})
+		c.Abort()
+		return
+	}
+	tryUser = db.DB.Table("users").Where("name = ?", newUser.Name).First(&module.User{})
+	if tryUser.RowsAffected > 0 {
+		log.Println("name exists")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"errno": 40000,
+			"msg":   "Bad Request, name exists",
+		})
+		c.Abort()
+		return
 	}
 
 	HashedPassword, err := passwd.HashPassword(newUser.Password)
@@ -29,11 +52,13 @@ func Register(c *gin.Context) {
 			"errno": 50000,
 			"msg":   "Internal Server Error",
 		})
+		c.Abort()
+		return
 	}
 
 	newUser.Password = HashedPassword
 
-	db.DB.Table("user").Create(newUser)
+	db.DB.Table("users").Create(newUser)
 
 	c.JSON(http.StatusOK, gin.H{
 		"errno": 20000,
@@ -44,19 +69,36 @@ func Register(c *gin.Context) {
 }
 
 func Login(c *gin.Context) {
-	email := c.PostForm("email")
-	password := c.PostForm("password")
+
+	type LoginRequset struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	var loginReq LoginRequset
+	err := c.BindJSON(&loginReq)
 
 	user := module.NewUser()
-	db.DB.Table("user").Where("email = ?", email).First(user)
+	db.DB.Table("users").Where("email = ?", loginReq.Email).First(user)
+	if user.Name == "" {
+		log.Println("user not found")
+		c.JSON(http.StatusNotFound, gin.H{
+			"errno": 40400,
+			"msg":   "Not Found, user not found",
+		})
+		c.Abort()
+		return
+	}
 
-	err := passwd.CheckHashed(password, user.Password)
+	err = passwd.CheckHashed(loginReq.Password, user.Password)
 	if err != nil {
 		log.Println("CheckHashed error: ", err)
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"errno": 40100,
 			"msg":   "Unauthorized at login, password error",
 		})
+		c.Abort()
+		return
 	}
 
 	token, err := jwt.GenerateJWT(user.Name, user.Uid, consts.User)
@@ -66,11 +108,39 @@ func Login(c *gin.Context) {
 			"errno": 50000,
 			"msg":   "Internal Server Error",
 		})
+		c.Abort()
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"errno": 20000,
 		"msg":   "OK",
 		"token": token,
+	})
+}
+
+func GetUserInfoByID(c *gin.Context) {
+	uid := c.Param("uid")
+
+	jwtID := c.GetString("uid")
+
+	//log.Printf("GetUserInfoByID: uid: %s jwtID: %s \n", uid, jwtID)
+
+	if jwtID != uid {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"errno": 40100,
+			"msg":   "Unauthorized, uid not match",
+		})
+		c.Abort()
+		return
+	}
+
+	user := module.NewUser()
+	db.DB.Table("users").Where("uid = ?", uid).First(user)
+
+	c.JSON(http.StatusOK, gin.H{
+		"errno": 20000,
+		"msg":   "OK",
+		"user":  user,
 	})
 }
