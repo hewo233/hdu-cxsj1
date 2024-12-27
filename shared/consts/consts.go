@@ -9,4 +9,7 @@ const (
 	User   = "user"
 
 	OneDay = 24 * time.Hour
+
+	BookCoverPath    = "./img/book_cover/"
+	DefaultCoverPath = "./img/book_cover/default.jpg"
 )

@@ -1,9 +1,14 @@
 package module
 
 type Book struct {
-	Bid       int    `json:"bid"`
-	Name      string `json:"name"`
-	Author    string `json:"author"`
-	Publisher string `json:"publisher"`
-	Intro     string `json:"intro"`
+	Bid       int    `json:"bid" gorm:"primary_key"`
+	Name      string `json:"name" gorm:"size:100;not null"`
+	Author    string `json:"author" gorm:"size:100;not null"`
+	Publisher string `json:"publisher" gorm:"size:100;not null"`
+	Intro     string `json:"intro" gorm:"size:255"`
+	CoverFile string `json:"cover_file" gorm:"size:255"`
+}
+
+func NewBook() *Book {
+	return &Book{}
 }
