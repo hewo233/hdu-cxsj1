@@ -70,12 +70,12 @@ func Register(c *gin.Context) {
 
 func Login(c *gin.Context) {
 
-	type LoginRequset struct {
+	type LoginRequest struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 
-	var loginReq LoginRequset
+	var loginReq LoginRequest
 	err := c.BindJSON(&loginReq)
 
 	user := module.NewUser()
