@@ -144,3 +144,44 @@ func GetUserInfoByID(c *gin.Context) {
 		"user":  user,
 	})
 }
+
+func UpdateUserInfoByID(c *gin.Context) {
+	uid := c.Param("uid")
+
+	newUser := module.NewUser()
+	err := c.BindJSON(newUser)
+	if err != nil {
+		log.Println("Update user BindJSON failed", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"errno": 50000,
+			"msg":   "Internal Server Error, BindJSON failed",
+		})
+		c.Abort()
+		return
+	}
+
+	oldUser := module.NewUser()
+	db.DB.Table("users").Where("uid = ?", uid).First(oldUser)
+
+	if newUser.Name != "" {
+		oldUser.Name = newUser.Name
+	}
+	if newUser.Gender != "" {
+		oldUser.Gender = newUser.Gender
+	}
+	if newUser.Password != "" {
+		HashedPassword, err := passwd.HashPassword(newUser.Password)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"errno": 50000,
+				"msg":   "Internal Server Error",
+			})
+			c.Abort()
+			return
+		}
+		oldUser.Password = HashedPassword
+	}
+
+	db.DB.Table("users").Where("uid = ?", uid).Updates(oldUser)
+}
