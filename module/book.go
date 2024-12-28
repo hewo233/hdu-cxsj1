@@ -8,8 +8,8 @@ type Book struct {
 	Intro     string `json:"intro" gorm:"size:255" form:"intro"`
 	CoverFile string `json:"cover_file" gorm:"size:255" form:"-"`
 
-	// User
-	Email string `json:"email" gorm:"size:100;not null" form:"-"`
+	//User
+	Uid int
 }
 
 func NewBook() *Book {

@@ -12,7 +12,15 @@ import (
 
 func AddBook(c *gin.Context) {
 
-	email := common.GetEmailFromJWT(c)
+	uid := common.GetUIDFromJWT(c)
+	if uid == -1 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"errno": 40100,
+			"msg":   "Unauthorized, uid not found",
+		})
+		c.Abort()
+		return
+	}
 
 	var book module.Book
 	err := c.ShouldBind(&book)
@@ -25,6 +33,8 @@ func AddBook(c *gin.Context) {
 		c.Abort()
 		return
 	}
+
+	book.Uid = uid
 
 	file, err := c.FormFile("cover")
 	if file != nil && err == nil {
@@ -78,13 +88,24 @@ func AddBook(c *gin.Context) {
 }
 
 func ListBook(c *gin.Context) {
-	var books []module.Book
-	db.DB.Table("books").Find(&books)
+
+	uid := common.GetUIDFromJWT(c)
+	if uid == -1 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"errno": 40100,
+			"msg":   "Unauthorized, uid not found",
+		})
+		c.Abort()
+		return
+	}
+
+	user := module.NewUser()
+	db.DB.Preload("Books").Where("uid = ?", uid).First(&user)
 
 	c.JSON(http.StatusOK, gin.H{
 		"errno": 20000,
 		"msg":   "OK",
-		"data":  books,
+		"data":  user.Books,
 	})
 }
 
@@ -101,6 +122,9 @@ func GetBookByID(c *gin.Context) {
 }
 
 func DeleteBookByID(c *gin.Context) {
+
+	// TODO user
+
 	bid := c.Param("bid")
 	db.DB.Table("books").Where("bid = ?", bid).Delete(&module.Book{})
 
@@ -111,6 +135,9 @@ func DeleteBookByID(c *gin.Context) {
 }
 
 func UpdateBookByID(c *gin.Context) {
+
+	// TODO user
+
 	bid := c.Param("bid")
 
 	var book module.Book

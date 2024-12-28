@@ -6,6 +6,8 @@ type User struct {
 	Email    string `json:"email" gorm:"unique;size:100;not null"`
 	Password string `json:"password" gorm:"size:255;not null" `
 	Gender   string `json:"gender" gorm:"size:10"`
+
+	Books []Book `gorm:"foreignKey:Uid;references:Uid"`
 }
 
 func NewUser() *User {
