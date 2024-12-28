@@ -101,7 +101,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token, err := jwt.GenerateJWT(user.Name, user.Uid, consts.User)
+	token, err := jwt.GenerateJWT(user.Email, user.Uid, consts.User)
 	if err != nil {
 		log.Println("generate JWT token error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -147,6 +147,7 @@ func GetUserInfoByID(c *gin.Context) {
 
 func UpdateUserInfoByID(c *gin.Context) {
 	uid := c.Param("uid")
+	// TODO TEST UpdateUserInfoByID
 
 	newUser := module.NewUser()
 	err := c.BindJSON(newUser)

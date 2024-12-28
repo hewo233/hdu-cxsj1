@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/hewo233/hdu-cxsj1/common"
 	"github.com/hewo233/hdu-cxsj1/db"
 	"github.com/hewo233/hdu-cxsj1/module"
 	"github.com/hewo233/hdu-cxsj1/shared/consts"
@@ -10,8 +11,11 @@ import (
 )
 
 func AddBook(c *gin.Context) {
+
+	email := common.GetEmailFromJWT(c)
+
 	var book module.Book
-	err := c.BindJSON(&book)
+	err := c.ShouldBind(&book)
 	if err != nil {
 		log.Println("book bind failed", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -46,7 +50,7 @@ func AddBook(c *gin.Context) {
 		})
 	} else {
 		if err != nil {
-			if err.Error() != "http: no such file" {
+			if err.Error() == "http: no such file" {
 
 				book.CoverFile = consts.DefaultCoverPath
 

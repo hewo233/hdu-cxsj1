@@ -11,14 +11,13 @@ import (
 	"os"
 )
 
-func CreateDB() {
-	err := DB.AutoMigrate(&module.User{})
+func UpdateDB() {
+	err := DB.AutoMigrate(&module.User{}, &module.Book{})
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
-
-	os.Exit(0)
+	log.Println("AutoMigrate success")
 }
 
 func ConnectDB() {

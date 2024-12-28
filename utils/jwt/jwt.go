@@ -11,16 +11,16 @@ import (
 var JWTKey = []byte("hdu-cxsj1JWTKEY")
 
 type Claims struct {
-	Name string
+	Email string
 	jwt.StandardClaims
 }
 
-func GenerateJWT(name string, uid int, audience string) (string, error) {
+func GenerateJWT(email string, uid int, audience string) (string, error) {
 	nowTime := time.Now()
 	expireTime := nowTime.Add(consts.OneDay)
 
 	claims := &Claims{
-		Name: name,
+		Email: email,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expireTime.Unix(),
 			Audience:  audience,
