@@ -18,4 +18,14 @@ func InitRoute(r *gin.Engine) {
 	{
 		user.GET("/:uid", handler.GetUserInfoByID)
 	}
+
+	book := r.Group("/book")
+	book.Use(middleware.JWTAuth("user"))
+	{
+		book.POST("/add", handler.AddBook)
+		book.GET("/list", handler.ListBook)
+		book.GET("/:bid", handler.GetBookByID)
+		book.PUT("/:bid", handler.UpdateBookByID)
+		book.DELETE("/:bid", handler.DeleteBookByID)
+	}
 }
