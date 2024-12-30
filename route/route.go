@@ -7,6 +7,11 @@ import (
 )
 
 func InitRoute(r *gin.Engine) {
+
+	r.Use(middleware.CorsMiddleware())
+
+	r.Static("/static/covers", "./img/book_cover")
+
 	r.GET("/ping", handler.Ping)
 	auth := r.Group("/auth")
 	{
@@ -17,6 +22,7 @@ func InitRoute(r *gin.Engine) {
 	user.Use(middleware.JWTAuth("user"))
 	{
 		user.GET("/:uid", handler.GetUserInfoByID)
+		user.PUT("/:uid", handler.UpdateUserInfoByID)
 	}
 
 	book := r.Group("/book")

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/hewo233/hdu-cxsj1/common"
 	"github.com/hewo233/hdu-cxsj1/db"
 	"github.com/hewo233/hdu-cxsj1/module"
 	"github.com/hewo233/hdu-cxsj1/shared/consts"
@@ -9,6 +10,7 @@ import (
 	passwd "github.com/hewo233/hdu-cxsj1/utils/password"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func Register(c *gin.Context) {
@@ -112,21 +114,53 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	type LoginUserResponse struct {
+		Uid    int    `json:"uid"`
+		Name   string `json:"name"`
+		Email  string `json:"email"`
+		Gender string `json:"gender"`
+	}
+	userRep := LoginUserResponse{
+		Uid:    user.Uid,
+		Name:   user.Name,
+		Email:  user.Email,
+		Gender: user.Gender,
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"errno": 20000,
 		"msg":   "OK",
 		"token": token,
+		"user":  userRep,
 	})
 }
 
 func GetUserInfoByID(c *gin.Context) {
-	uid := c.Param("uid")
+	uidStr := c.Param("uid")
+	uid, err := strconv.Atoi(uidStr)
+	if err != nil {
+		log.Println("uidStr to uid failed", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"errno": 50000,
+			"msg":   "Internal Server Error, uidStr to uid failed",
+		})
+		c.Abort()
+		return
+	}
 
-	jwtID := c.GetString("uid")
+	jwtUid := common.GetUIDFromJWT(c)
+	if jwtUid == -1 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"errno": 40100,
+			"msg":   "Unauthorized, uid not found",
+		})
+		c.Abort()
+		return
+	}
 
 	//log.Printf("GetUserInfoByID: uid: %s jwtID: %s \n", uid, jwtID)
 
-	if jwtID != uid {
+	if jwtUid != uid {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"errno": 40100,
 			"msg":   "Unauthorized, uid not match",
@@ -146,11 +180,39 @@ func GetUserInfoByID(c *gin.Context) {
 }
 
 func UpdateUserInfoByID(c *gin.Context) {
-	uid := c.Param("uid")
-	// TODO TEST UpdateUserInfoByID
+	uidStr := c.Param("uid")
+	uid, err := strconv.Atoi(uidStr)
+	if err != nil {
+		log.Println("uidStr to uid failed", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"errno": 50000,
+			"msg":   "Internal Server Error, uidStr to uid failed",
+		})
+		c.Abort()
+		return
+	}
+
+	JWTUid := common.GetUIDFromJWT(c)
+	if JWTUid == -1 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"errno": 40100,
+			"msg":   "Unauthorized, uid not found",
+		})
+		c.Abort()
+		return
+	}
+
+	if JWTUid != uid {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"errno": 40100,
+			"msg":   "Unauthorized, uid not match",
+		})
+		c.Abort()
+		return
+	}
 
 	newUser := module.NewUser()
-	err := c.BindJSON(newUser)
+	err = c.BindJSON(newUser)
 	if err != nil {
 		log.Println("Update user BindJSON failed", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -165,6 +227,17 @@ func UpdateUserInfoByID(c *gin.Context) {
 	db.DB.Table("users").Where("uid = ?", uid).First(oldUser)
 
 	if newUser.Name != "" {
+		tyrUser := module.NewUser()
+		result := db.DB.Table("users").Where("name = ?", newUser.Name).First(tyrUser)
+		if result.RowsAffected > 0 && tyrUser.Uid != uid {
+			log.Println("name exists")
+			c.JSON(http.StatusBadRequest, gin.H{
+				"errno": 40000,
+				"msg":   "Bad Request, name exists",
+			})
+			c.Abort()
+			return
+		}
 		oldUser.Name = newUser.Name
 	}
 	if newUser.Gender != "" {
@@ -185,4 +258,10 @@ func UpdateUserInfoByID(c *gin.Context) {
 	}
 
 	db.DB.Table("users").Where("uid = ?", uid).Updates(oldUser)
+
+	c.JSON(http.StatusOK, gin.H{
+		"errno": 20000,
+		"msg":   "OK",
+		"user":  oldUser,
+	})
 }

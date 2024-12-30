@@ -8,6 +8,7 @@ import (
 	"github.com/hewo233/hdu-cxsj1/shared/consts"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func AddBook(c *gin.Context) {
@@ -110,9 +111,40 @@ func ListBook(c *gin.Context) {
 }
 
 func GetBookByID(c *gin.Context) {
+
+	uid := common.GetUIDFromJWT(c)
+	if uid == -1 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"errno": 40100,
+			"msg":   "Unauthorized, uid not found",
+		})
+		c.Abort()
+		return
+	}
+
 	var book module.Book
-	bid := c.Param("bid")
-	db.DB.Table("books").Where("bid = ?", bid).First(&book)
+
+	bidStr := c.Param("bid")
+	bid, err := strconv.Atoi(bidStr)
+	if err != nil {
+		log.Println("bidStr to bid failed", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"errno": 50000,
+			"msg":   "Internal Server Error, BidStr to Bid failed",
+		})
+		c.Abort()
+		return
+	}
+
+	result := db.DB.Table("books").Where("bid = ? AND uid = ?", bid, uid).First(&book)
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"errno": 40400,
+			"msg":   "not found, book not found",
+		})
+		c.Abort()
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"errno": 20000,
@@ -123,10 +155,37 @@ func GetBookByID(c *gin.Context) {
 
 func DeleteBookByID(c *gin.Context) {
 
-	// TODO user
+	uid := common.GetUIDFromJWT(c)
+	if uid == -1 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"errno": 40100,
+			"msg":   "Unauthorized, uid not found",
+		})
+		c.Abort()
+		return
+	}
 
-	bid := c.Param("bid")
-	db.DB.Table("books").Where("bid = ?", bid).Delete(&module.Book{})
+	bidStr := c.Param("bid")
+	bid, err := strconv.Atoi(bidStr)
+	if err != nil {
+		log.Println("bidStr to bid failed", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"errno": 50000,
+			"msg":   "Internal Server Error, BidStr to Bid failed",
+		})
+		c.Abort()
+		return
+	}
+
+	result := db.DB.Table("books").Where("bid = ? AND uid = ?", bid, uid).Delete(&module.Book{})
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"errno": 40400,
+			"msg":   "not found, book not found",
+		})
+		c.Abort()
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"errno": 20000,
@@ -136,13 +195,31 @@ func DeleteBookByID(c *gin.Context) {
 
 func UpdateBookByID(c *gin.Context) {
 
-	// TODO user
+	uid := common.GetUIDFromJWT(c)
+	if uid == -1 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"errno": 40100,
+			"msg":   "Unauthorized, uid not found",
+		})
+		c.Abort()
+		return
+	}
 
-	bid := c.Param("bid")
+	bidStr := c.Param("bid")
+	bid, err := strconv.Atoi(bidStr)
+	if err != nil {
+		log.Println("bidStr to bid failed", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"errno": 50000,
+			"msg":   "Internal Server Error, BidStr to Bid failed",
+		})
+		c.Abort()
+		return
+	}
 
 	var book module.Book
 
-	err := c.BindJSON(&book)
+	err = c.ShouldBind(&book)
 	if err != nil {
 		log.Println("book bind failed", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -154,7 +231,15 @@ func UpdateBookByID(c *gin.Context) {
 	}
 
 	oldBook := module.NewBook()
-	db.DB.Table("books").Where("bid = ?", bid).First(oldBook)
+	result := db.DB.Table("books").Where("bid = ? AND uid = ?", bid, uid).First(oldBook)
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"errno": 40400,
+			"msg":   "not found, book not found",
+		})
+		c.Abort()
+		return
+	}
 
 	if book.Name != "" {
 		oldBook.Name = book.Name
@@ -200,9 +285,13 @@ func UpdateBookByID(c *gin.Context) {
 			}
 		}
 	}
+
+	db.DB.Table("books").Updates(oldBook)
+
 	c.JSON(http.StatusOK, gin.H{
 		"errno": 20000,
 		"msg":   "OK",
 		"data":  oldBook,
 	})
+
 }
